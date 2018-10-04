@@ -7,11 +7,11 @@ class mainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     def __init__(self, *args, **kwargs):
         super(mainWindow, self).__init__(*args, **kwargs)
         self.setupUi(self)
-    def runPreceptron():
-        #read File
+#     def runPreceptron():
+#         #read File
         
-class preceptron(QtWidgets.QMainWindow, Ui_MainWindow):
-    def __init__(self):
+# class preceptron(QtWidgets.QMainWindow, Ui_MainWindow):
+#     def __init__(self):
         
         
 
