@@ -85,6 +85,7 @@ class mainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         super(mainWindow, self).__init__(*args, **kwargs)
         self.setupUi(self)
         self.train_plot = QtWidgets.QVBoxLayout(self.graphicsView_train)
+        self.test_plot = QtWidgets.QVBoxLayout(self.graphicsView_test)
         # train_plot = QtWidgets.QVBoxLayout(self.graphicsView_train)
         # trainp = MyDynamicMplCanvas(self.graphicsView_train, width=5, height=4, dpi=100)
         # train_plot.addWidget(trainp)
@@ -142,15 +143,14 @@ class mainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.yr = np.unique(y_range)
 
         self.train_X,self.test_X,self.train_y,self.test_y = train_test_split(X , y , test_size = (1/3)) 
-        
-        self.train_plot.removeWidget(self.sc)
-        self.sc = MyStaticMplCanvas(self.graphicsView_train, width=5, height=4, dpi=100, X = self.train_X, y = self.train_y)
-        self.train_plot.addWidget(self.sc)
 
+        #make initial plot 
+        self.train_plot.removeWidget(self.sc)
         self.test_plot.removeWidget(self.sc_test)
+        self.sc = MyStaticMplCanvas(self.graphicsView_train, width=5, height=4, dpi=100, X = self.train_X, y = self.train_y)
         self.sc_test = MyStaticMplCanvas(self.graphicsView_test, width=5, height=4, dpi=100, X = self.test_X, y = self.test_y)
+        self.train_plot.addWidget(self.sc)
         self.test_plot.addWidget(self.sc_test)
-        # self.preceptron()
     
     def preceptron(self):
         self.learn = float(self.textEdit_learn.toPlainText())
@@ -197,11 +197,7 @@ class mainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 #     def runPreceptron():
 #         #read File
         
-# class preceptron(QtWidgets.QMainWindow, Ui_MainWindow):
-#     def __init__(self):
         
-        
-
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
     mainWindow = mainWindow()
