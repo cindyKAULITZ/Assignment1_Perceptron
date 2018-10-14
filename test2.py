@@ -14,6 +14,7 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 import threading
 import time
+from copy import deepcopy
 
 thr = -1.0
 c = [0]
@@ -25,19 +26,26 @@ wRecord = []
 class MyMplCanvas(FigureCanvas):
     """Ultimately, this is a QWidget (as well as a FigureCanvasAgg, etc.)."""
 
+    fig = Figure()
+        # plt.ion()
+        # matplotlib.interactive(True)
+        # plt.install_repl_displayhook()
+    canvas = FigureCanvas(fig)
+
     def __init__(self, parent=None, width=5, height=4, dpi=100, X = [] , y = []):
         global xr
         global yr
-        fig = Figure(figsize=(width, height), dpi=dpi)
-        plt.ion()
+        self.fig = Figure(figsize=(width, height), dpi=dpi)
+        # plt.ion()
         # matplotlib.interactive(True)
         # plt.install_repl_displayhook()
-        self.axes = fig.add_subplot(111)
+        self.canvas = FigureCanvas.__init__(self, self.fig)
+        self.axes = self.fig.add_subplot(111)
         self.axes.set_xlim(xr.min() - 0.5, xr.max() + 0.5, auto = False)
         self.axes.set_ylim(yr.min() - 0.5, yr.max() + 0.5, auto = False)
         self.compute_initial_figure(X, y)
         
-        FigureCanvas.__init__(self, fig)
+        
         self.setParent(parent)
 
         FigureCanvas.setSizePolicy(self,
@@ -45,8 +53,16 @@ class MyMplCanvas(FigureCanvas):
                                    QtWidgets.QSizePolicy.Expanding)
         FigureCanvas.updateGeometry(self)
 
-    def compute_initial_figure(self):
+    def compute_initial_figure(self,X ,y):
         pass
+    def activeLine(self):
+        pass
+    def makeLine(self):
+        pass
+    def removeLine(self, target):
+        pass
+    
+
 
 class MyStaticMplCanvas(MyMplCanvas):
     """Simple canvas with a sine plot."""
@@ -56,7 +72,10 @@ class MyStaticMplCanvas(MyMplCanvas):
         cmap = ListedColormap(T[:3])
         for index in range(0,len(X)):
             self.axes.scatter(x = X[index][0], y = X[index][1], s=30, c=cmap(int(y[index])), alpha=1)
-    
+
+    def removeLine(self, target):
+        self.axes.lines.remove(target[0])
+        
     def makeLine(self):
         global c
         global xr
@@ -66,59 +85,40 @@ class MyStaticMplCanvas(MyMplCanvas):
         x1 = np.linspace(xr.min(),xr.max(),1000) # 100 linearly spaced numbers
         x2 = ((-w[1])/w[2])*x1 + (w[0]/w[2])
         lines = self.axes.plot(x1,x2,c = 'indigo')
-        plt.draw()
+        # plt.draw()
         # remove(lines)
 
-
-class MyDynamicMplCanvas(MyMplCanvas):
-    """A canvas that updates itself every second with a new plot."""
-    global xr
-    global yr
-    global w
-    def __init__(self, *args, **kwargs):
-        # plt.ion()
-        MyMplCanvas.__init__(self, *args, **kwargs)
-
-    def compute_initial_figure(self, X, y):
-        T = ('royalblue', 'salmon', 'turquoise') # for color value
-        cmap = ListedColormap(T[:3])
-        for index in range(0,len(X)):
-            self.axes.scatter(x = X[index][0], y = X[index][1], s=30, c=cmap(int(y[index])), alpha=1)
-
-    def remove(self,target):
-        self.axes.lines.remove(target[0])
-
-    def callUpdate(self):
-        timer = QtCore.QTimer(self)
-        timer.timeout.connect(self.update_figure)
-        # QtCore.QTimer.singleShot(20,timer.stop)
-        timer.start(0.1)
-
-    def update_figure(self):
-        global c
+    def activeLine(self):
         global xr
         global yr
-        global w
-        print('EEEE')
-        # self.axes.cla()
-        # Build a list of 4 random integers between 0 and 10 (both inclusive)
-        x1 = np.linspace(xr.min(),xr.max(),1000) # 100 linearly spaced numbers
-        x2 = ((-w[1])/w[2])*x1 + (w[0]/w[2])
-        lines = self.axes.plot(x1,x2,c = 'indigo')
-        self.axes.draw
-        # time.sleep(0.0001)
-        self.remove(lines)
-    def doLearning(self, target):
-        target.preceptron()
- 
+        global wRecord
+        # plt.ion()
+        i = 0
+        while i < len(wRecord):
+            x1 = np.linspace(xr.min(),xr.max(),1000) # 100 linearly spaced numbers
+            x2 = ((-wRecord[i][1])/wRecord[i][2])*x1 + (wRecord[i][0]/wRecord[i][2])
+            lines = self.axes.plot(x1,x2,c = 'indigo')
+            # print(type(self))
+            # self.draw()
+            self.fig.canvas.draw()
+            plt.pause(0.01)
+            # mng = plt.get_current_fig_manager()
+            # mng.window.showMinimized()
+            self.removeLine(lines)
+            i += 1
+
 class mainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     filename = ''
-    fig_train = plt.figure()
-    fig_test = plt.figure()
+    # fig_train = plt.figure()
+    # plt.get_current_fig_manager().window.showMinimized()
+    # fig_test = plt.figure()
+    # plt.get_current_fig_manager().window.showMinimized()
     train_plot = QtWidgets.QVBoxLayout() 
     test_plot = QtWidgets.QVBoxLayout()
     sc = MyStaticMplCanvas()
+    plt.get_current_fig_manager().window.showMinimized()
     sc_test = MyStaticMplCanvas()
+    plt.get_current_fig_manager().window.showMinimized()
     learn = 0.8
     
     train_X = []
@@ -132,12 +132,8 @@ class mainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.setupUi(self)
         self.train_plot = QtWidgets.QVBoxLayout(self.graphicsView_train)
         self.test_plot = QtWidgets.QVBoxLayout(self.graphicsView_test)
-        # train_plot = QtWidgets.QVBoxLayout(self.graphicsView_train)
-        # trainp = MyDynamicMplCanvas(self.graphicsView_train, width=5, height=4, dpi=100)
-        # train_plot.addWidget(trainp)
-        # test_plot = QtWidgets.QVBoxLayout(self.graphicsView_test)
-        # testp = MyDynamicMplCanvas(self.graphicsView_test, width=5, height=4, dpi=100)
-        # test_plot.addWidget(testp)
+        self.train_plot.addWidget(self.sc)
+        self.test_plot.addWidget(self.sc_test)
         
         #setting File
         list1 = [
@@ -158,12 +154,13 @@ class mainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.pushBtn_load.clicked.connect(self.loadFile)
         self.pushBtn_start.clicked.connect(self.preceptron)
 
+
     def loadFile(self):
         global c
         global xr
         global yr
         global w
-        print(self.comboBox.currentText())
+        # print(self.comboBox.currentText())
         fileName = self.comboBox.currentText()
         f = open(fileName,'r')
         param = f.read()
@@ -207,9 +204,11 @@ class mainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         global xr
         global yr
         global w
-        
+        global wRecord
+        wRecord.clear()
         self.learn = float(self.textEdit_learn.toPlainText())
-        # w = [thr, 0.0, 1.0]
+        w = [thr, 0.0, 1.0]
+        wRecord.append(deepcopy(w))
         n = 0
         y = -1
         stop = 0
@@ -219,40 +218,42 @@ class mainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             # time.sleep(0.001)
             #print(data[n%4][2])
             sgn = round((w[0]*thr) + (w[1]*self.train_X[n%len(self.train_X)][0]) + (w[2]*self.train_X[n%len(self.train_X)][1]),precise)
-            print('sgn = ',sgn)
+            # print('sgn = ',sgn)
             if sgn > 0:
                 y = c.max() 
-                print('y=1')
+                # print('y=1')
             else:
                 y = c.min()
-                print('y=0')
+                # print('y=0')
 
             if y > self.train_y[n%len(self.train_X)]:
-                print('y>')
+                # print('y>')
                 w[0] = round(w[0] - (self.learn*thr),precise)
                 w[1] = round(w[1] - (self.learn*self.train_X[n%len(self.train_X)][0]),precise)
                 w[2] = round(w[2] - (self.learn*self.train_X[n%len(self.train_X)][1]),precise)
                 stop = 0
             elif y < self.train_y[n%len(self.train_X)]:
-                print('y<')
+                # print('y<')
                 w[0] = round(w[0] + (self.learn*thr),precise)
                 w[1] = round(w[1] + (self.learn*self.train_X[n%len(self.train_X)][0]),precise)
                 w[2] = round(w[2] + (self.learn*self.train_X[n%len(self.train_X)][1]),precise)
                 stop = 0 
             else:
-                print('y=')
+                # print('y=')
                 stop+=1
             if n <= 100:
-                print('hi')
-                self.sc.makeLine()
+                # print('hi')
+                wRecord.append(deepcopy(w))
             elif n%100 == 0 and n > 100 :
-                self.sc.makeLine()
+                wRecord.append(deepcopy(w))
             n+=1
+        wRecord.append(deepcopy(w))
             # plt.show()
 
         # matplotlib.interactive(False)
         # plt.uninstall_repl_displayhook()
-
+        # print(w)
+        # print(wRecord)
         correctTrain = 0
         correctTest = 0
         for i in range(0,len(self.train_y)):
@@ -274,7 +275,23 @@ class mainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
             if yTest == self.test_y[j]:
                 correctTest +=1
+
         
+        # active Line draw
+        self.train_plot.removeWidget(self.sc)
+        self.sc = MyStaticMplCanvas(self.graphicsView_train, width=5, height=4, dpi=100, X = self.train_X, y = self.train_y)
+        self.train_plot.addWidget(self.sc)
+        # plt.ion()
+        plt.interactive(True)
+        self.sc.activeLine()
+        plt.interactive(False)
+        
+        self.test_plot.removeWidget(self.sc_test)
+        self.sc_test = MyStaticMplCanvas(self.graphicsView_test, width=5, height=4, dpi=100, X = self.test_X, y = self.test_y)
+        self.sc_test.makeLine()
+        self.test_plot.addWidget(self.sc_test)
+        
+        #show the value
         trainR = round(correctTrain/len(self.train_y),precise)
         testR = round(correctTest/len(self.test_y),precise)
         self.textBrowser_test.setText(str(testR))
@@ -283,16 +300,7 @@ class mainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.textBrowser_w1.setText(str(w[1]))
         self.textBrowser_w2.setText(str(w[2]))
 
-        # t.join()
-        self.train_plot.removeWidget(self.sc)
-        self.sc = MyStaticMplCanvas(self.graphicsView_train, width=5, height=4, dpi=100, X = self.train_X, y = self.train_y)
-        self.sc.makeLine()
-        self.train_plot.addWidget(self.sc)
-
-        self.test_plot.removeWidget(self.sc_test)
-        self.sc_test = MyStaticMplCanvas(self.graphicsView_test, width=5, height=4, dpi=100, X = self.test_X, y = self.test_y)
-        self.sc_test.makeLine()
-        self.test_plot.addWidget(self.sc_test)
+        
 
         
 if __name__ == "__main__":
@@ -300,6 +308,9 @@ if __name__ == "__main__":
     app.setStyle('Fusion')
     mainWindow = mainWindow()
     mainWindow.show()
-    sys.exit(app.exec_())
+    app.exec_()
+    sys.exit()
+    
+    
     
   
